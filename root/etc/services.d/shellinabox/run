@@ -1,0 +1,30 @@
+#!/usr/bin/with-contenv bash
+
+cd /config || exit
+
+[ -r /config/shellinabox.conf ] && . shellinabox.conf
+
+# Set some default values
+SHELLINABOX_DATADIR="${SHELLINABOX_DATADIR:-/config/certs}"
+SHELLINABOX_PORT="${SHELLINABOX_PORT:-4200}"
+SHELLINABOX_USER="${SHELLINABOX_USER:-abc}"
+SHELLINABOX_GROUP="${SHELLINABOX_GROUP:-abc}"
+
+eval shellinaboxd --disable-ssl-menu       \
+      -c "${SHELLINABOX_DATADIR}" -p "${SHELLINABOX_PORT}"  \
+      -u "${SHELLINABOX_USER}" -g "${SHELLINABOX_GROUP}"    \
+       $(for i in $(ls /etc/shellinabox/options-enabled/*.css |
+                                 sed -e                                       \
+                                    's/.*[/]\([0-9]*\)[-_+][^/:,;]*[.]css/\1/'|
+                                 sort -u); do
+                        for j in /etc/shellinabox/options-enabled/"$i"*.css; do
+                          echo -n "$j" |
+                          sed -e 's/\(.*[/]\)\([0-9]*\)\([-_+]\)\([^/:,;]*\)[.]css/\4:\3\1\2\3\4.css,/
+                                  s/:_/:-/'
+                        done |
+                        sed -e 's/,$/;/'
+                      done |
+                      sed -e 's/;$//
+                              //b
+                              s/.*/--user-css "\0"/')            \
+      ${SHELLINABOX_ARGS}
